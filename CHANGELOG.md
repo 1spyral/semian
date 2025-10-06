@@ -1,3 +1,7 @@
+# v0.25.5
+
+* Create GitHub Action to publish new releasethis should show up in CHANGELOG.md
+
 # v0.25.4
 
 * Remove redundant semian resource name from OpenCircuitError and ResourceBusyError
