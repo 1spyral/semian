@@ -26,7 +26,7 @@ CURRENT_VERSION="$2"
 echo -e "${GREEN}Updating changelog from v$CURRENT_VERSION to v$NEW_VERSION${NC}"
 
 # Get commits since the current version tag, excluding merges
-COMMITS=$(git log --oneline --no-merges "v${CURRENT_VERSION}..HEAD" --pretty=format:"%s" | tac)
+COMMITS=$(git log --oneline --no-merges "v${CURRENT_VERSION}..HEAD" --pretty=format:"%s")
 
 if [[ -z "$COMMITS" ]]; then
     echo -e "${YELLOW}No new commits since v$CURRENT_VERSION${NC}"
@@ -74,7 +74,7 @@ TEMP_FILE=$(mktemp)
 # Add new version header and commits
 echo "# v$NEW_VERSION" > "$TEMP_FILE"
 echo "" >> "$TEMP_FILE"
-echo "$FILTERED_COMMITS" >> "$TEMP_FILE"
+printf "%s\n" "$FILTERED_COMMITS" >> "$TEMP_FILE"
 echo "" >> "$TEMP_FILE"
 
 # Append existing changelog content
