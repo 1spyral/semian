@@ -5,53 +5,79 @@
 
 set -e
 
-if [ $# -ne 2 ]; then
+NEW_VERSION=$1
+CURRENT_VERSION=$2
+
+if [ -z "$NEW_VERSION" ] || [ -z "$CURRENT_VERSION" ]; then
     echo "Usage: $0 <new_version> <current_version>"
-    echo "Example: $0 1.2.3 1.2.2"
+    echo "Example: $0 v1.2.0 v1.1.0"
     exit 1
 fi
 
-NEW_VERSION="$1"
-CURRENT_VERSION="$2"
+# Get commits between versions, excluding unwanted commits
+get_filtered_commits() {
+    local from_tag=$1
+    local to_tag=$2
+    
+    # Get all commits between tags with format: hash|subject|author
+    git log --pretty=format:"%H|%s|%an" "${from_tag}..${to_tag}" --no-merges | \
+    while IFS='|' read -r hash subject author; do
+        # Skip dependabot commits
+        if [[ "$author" == "dependabot"* ]] || [[ "$author" == *"dependabot"* ]]; then
+            continue
+        fi
+        
+        # Skip version bump commits
+        if [[ "$subject" =~ ^[Bb]ump\ version\ to\ |^[Vv]ersion\ bump\ |^[Rr]elease\ |^v?[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            continue
+        fi
+        
+        # Skip merge commits (additional safety net)
+        if [[ "$subject" =~ ^[Mm]erge\ |^[Mm]erged\ ]]; then
+            continue
+        fi
+        
+        # Format as changelog entry
+        echo "* $subject"
+    done
+}
 
-echo "Updating CHANGELOG.md from $CURRENT_VERSION to $NEW_VERSION"
+# Generate changelog entries
+echo "Generating changelog entries for $NEW_VERSION..."
+echo ""
 
-# Get the last tag to generate notes from
-if [ "$CURRENT_VERSION" != "0.0.0" ]; then
-    LAST_TAG="v$CURRENT_VERSION"
+# Get commits from current version to HEAD if CURRENT_VERSION is provided
+if [ "$CURRENT_VERSION" != "HEAD" ]; then
+    COMMITS=$(get_filtered_commits "$CURRENT_VERSION" "HEAD")
 else
-    # If no previous version, get the oldest commit
-    LAST_TAG=$(git rev-list --max-parents=0 HEAD)
+    # If no previous version, get all commits
+    COMMITS=$(git log --pretty=format:"* %s" --no-merges | \
+    grep -v -E "(dependabot|^[[:space:]]*\*[[:space:]]*[Bb]ump version|^[[:space:]]*\*[[:space:]]*[Vv]ersion bump|^[[:space:]]*\*[[:space:]]*[Rr]elease|^[[:space:]]*\*[[:space:]]*v?[0-9]+\.[0-9]+\.[0-9]+|^[[:space:]]*\*[[:space:]]*[Mm]erge)")
 fi
 
-echo "Generating release notes from $LAST_TAG to HEAD"
-
-# Create temporary changelog file
-TEMP_CHANGELOG="temp_changelog.md"
-TEMP_FULL_CHANGELOG="temp_full_changelog.md"
-
-# Generate release notes for the changelog
-echo "# v$NEW_VERSION" > "$TEMP_CHANGELOG"
-echo "" >> "$TEMP_CHANGELOG"
-
-# Get commits since last version, excluding merge commits and dependabot
-if git log --pretty=format:"* %s" "$LAST_TAG..HEAD" --no-merges | \
-   grep -v -E "(^[[:space:]]*$|Bump.*by.*dependabot|^Merge)" | \
-   head -20 >> "$TEMP_CHANGELOG"; then
-    echo "Added commit-based release notes"
-else
-    echo "* Version bump to $NEW_VERSION" >> "$TEMP_CHANGELOG"
-    echo "No significant commits found, added generic version bump note"
+if [ -z "$COMMITS" ]; then
+    echo "No commits found to add to changelog."
+    exit 0
 fi
 
-echo "" >> "$TEMP_CHANGELOG"
-echo "" >> "$TEMP_CHANGELOG"
+# Create temporary file with new changelog content
+TEMP_FILE=$(mktemp)
 
-# Prepend to existing CHANGELOG
-cat "$TEMP_CHANGELOG" CHANGELOG.md > "$TEMP_FULL_CHANGELOG"
-mv "$TEMP_FULL_CHANGELOG" CHANGELOG.md
-rm "$TEMP_CHANGELOG"
+# Add new version header and commits
+echo "# $NEW_VERSION" > "$TEMP_FILE"
+echo "" >> "$TEMP_FILE"
+echo "$COMMITS" >> "$TEMP_FILE"
+echo "" >> "$TEMP_FILE"
 
-echo "Successfully updated CHANGELOG.md"
-echo "New changelog entries:"
-head -15 CHANGELOG.md
+# Append existing changelog content (skip first line if it's empty)
+if [ -f "CHANGELOG.md" ]; then
+    tail -n +1 CHANGELOG.md >> "$TEMP_FILE"
+fi
+
+# Replace original changelog
+mv "$TEMP_FILE" CHANGELOG.md
+
+echo "Updated CHANGELOG.md with $NEW_VERSION"
+echo ""
+echo "New entries added:"
+echo "$COMMITS"
