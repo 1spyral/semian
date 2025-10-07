@@ -1,3 +1,8 @@
+# v0.25.8
+
+* d
+* Create GitHub Action to publish new release
+
 # v0.25.7
 
 * Delete Testing
