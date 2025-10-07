@@ -1,3 +1,8 @@
+# v1.0.0
+
+* ONE MORE
+* Update release.yml
+
 # v0.25.8
 
 * d
