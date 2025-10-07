@@ -1,3 +1,7 @@
+# v1.0.1
+
+* Create GitHub Action to publish new release
+
 # v1.0.0
 
 * ONE MORE
