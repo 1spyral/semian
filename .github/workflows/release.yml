@@ -21,7 +21,7 @@ jobs:
     uses: ./.github/workflows/test.yml
 
   read-version:
-    name: "REVIEW: New Version Information"
+    name: Read current version and calculate new version
     runs-on: ubuntu-latest
     outputs:
       current_version: ${{ steps.current_version.outputs.version }}
@@ -51,35 +51,11 @@ jobs:
           .github/scripts/calculate_version.sh \
             "${{ steps.current_version.outputs.version }}" \
             "${{ github.event.inputs.release_type }}"
-      -
-        name: "REVIEW: New Version Information"
-        run: |
-          echo ""
-          echo "🔍 Version Update Preview"
-          echo "========================="
-          echo "Current version: ${{ steps.current_version.outputs.version }}"
-          echo "New version: ${{ steps.new_version.outputs.version }}"
-          echo "Release type: ${{ github.event.inputs.release_type }}"
-          echo ""
-          echo "⚠️  Please review the version information above."
-          echo "The workflow will pause at the next step for manual approval."
-
-  confirm-version:
-    name: "CONFIRM: Version update"
-    runs-on: ubuntu-latest
-    needs: [read-version]
-    environment: release-approval
-    steps:
-      -
-        name: Manual approval received
-        run: |
-          echo "✅ Manual approval received!"
-          echo "Proceeding with version update: ${{ needs.read-version.outputs.current_version }} → ${{ needs.read-version.outputs.new_version }}"
 
   preview-changes:
-    name: "REVIEW: File Changes Preview"
+    name: "REVIEW CHANGES"
     runs-on: ubuntu-latest
-    needs: [test, confirm-version, read-version]
+    needs: [read-version]
     env:
       BUNDLE_FROZEN: false
     steps:
@@ -115,8 +91,14 @@ jobs:
             "${{ needs.read-version.outputs.new_version }}" \
             "${{ needs.read-version.outputs.current_version }}"
       -
-        name: "REVIEW: File Changes Preview"
+        name: "REVIEW CHANGES"
         run: |
+          echo ""
+          echo "🔍 Version Update Summary"
+          echo "========================="
+          echo "Current version: ${{ needs.read-version.outputs.current_version }}"
+          echo "New version: ${{ needs.read-version.outputs.new_version }}"
+          echo "Release type: ${{ github.event.inputs.release_type }}"
           echo ""
           echo "📋 File Changes Preview"
           echo "======================="
@@ -128,25 +110,25 @@ jobs:
           echo "=================="
           git diff --color=never HEAD -- lib/semian/version.rb Gemfile.lock CHANGELOG.md || true
           echo ""
-          echo "⚠️  Please review the changes above."
+          echo "⚠️  Please review the version and file changes above."
           echo "The workflow will pause at the next step for approval to commit and tag."
 
-  confirm-commit:
-    name: "CONFIRM: Files changed"
+  confirm-release:
+    name: "CONFIRM CHANGES"
     runs-on: ubuntu-latest
     needs: [preview-changes, read-version]
     environment: release-approval
     steps:
       -
-        name: Commit approval received
+        name: Release approval received
         run: |
-          echo "✅ Commit approval received!"
-          echo "Proceeding to commit and tag version ${{ needs.read-version.outputs.new_version }}"
+          echo "✅ Release approval received!"
+          echo "Proceeding to commit and tag version ${{ needs.read-version.outputs.current_version }} → ${{ needs.read-version.outputs.new_version }}"
 
   commit-and-tag:
     name: Commit and tag version
     runs-on: ubuntu-latest
-    needs: [confirm-commit, read-version]
+    needs: [test, confirm-release, read-version]
     permissions:
       contents: write
     steps:
@@ -195,7 +177,7 @@ jobs:
   build-and-release:
     name: Build gem and create GitHub release
     runs-on: ubuntu-latest
-    needs: [commit-and-tag, read-version]
+    needs: [test, commit-and-tag, read-version]
     permissions:
       contents: write
     steps:
