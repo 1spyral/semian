@@ -21,7 +21,7 @@ jobs:
     uses: ./.github/workflows/test.yml
 
   read-version:
-    name: Read current version and calculate new version
+    name: "REVIEW: New Version Information"
     runs-on: ubuntu-latest
     outputs:
       current_version: ${{ steps.current_version.outputs.version }}
@@ -52,7 +52,7 @@ jobs:
             "${{ steps.current_version.outputs.version }}" \
             "${{ github.event.inputs.release_type }}"
       -
-        name: Display version information for review
+        name: "REVIEW: New Version Information"
         run: |
           echo ""
           echo "🔍 Version Update Preview"
@@ -65,19 +65,19 @@ jobs:
           echo "The workflow will pause at the next step for manual approval."
 
   confirm-version:
-    name: Confirm version update
+    name: "CONFIRM: Version update"
     runs-on: ubuntu-latest
     needs: [read-version]
     environment: release-approval
     steps:
       -
-        name: Wait for manual approval
+        name: Manual approval received
         run: |
           echo "✅ Manual approval received!"
           echo "Proceeding with version update: ${{ needs.read-version.outputs.current_version }} → ${{ needs.read-version.outputs.new_version }}"
 
   preview-changes:
-    name: Update version files and changelog
+    name: "REVIEW: File Changes Preview"
     runs-on: ubuntu-latest
     needs: [test, confirm-version, read-version]
     env:
@@ -115,7 +115,7 @@ jobs:
             "${{ needs.read-version.outputs.new_version }}" \
             "${{ needs.read-version.outputs.current_version }}"
       -
-        name: Display changes for review
+        name: "REVIEW: File Changes Preview"
         run: |
           echo ""
           echo "📋 File Changes Preview"
@@ -132,13 +132,13 @@ jobs:
           echo "The workflow will pause at the next step for approval to commit and tag."
 
   confirm-commit:
-    name: Confirm commit and tag
+    name: "CONFIRM: Files changed"
     runs-on: ubuntu-latest
     needs: [preview-changes, read-version]
     environment: release-approval
     steps:
       -
-        name: Wait for commit approval
+        name: Commit approval received
         run: |
           echo "✅ Commit approval received!"
           echo "Proceeding to commit and tag version ${{ needs.read-version.outputs.new_version }}"
