@@ -1,3 +1,8 @@
+# v2.0.0
+
+* 1.5.0
+* Delete preview-release.yml
+
 # v1.0.0
 
 * Delete preview-release.yml
