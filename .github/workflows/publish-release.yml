@@ -105,14 +105,20 @@ jobs:
             semian-*.gem \
             semian-*.gem.sha512
       -
-        name: Filter dependabot commits
+        name: Filter release PR commits
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.check-version-bump.outputs.version }}
         run: |
           tag="v$VERSION"
           gh release view "$tag" --json body -q '.body' > temp_notes.md
-          grep -v -i "bump.*by.*dependabot" temp_notes.md > filtered_notes.md || true
+          
+          # Filter out dependabot commits and the release PR itself
+          grep -v -i "bump.*by.*dependabot" temp_notes.md | \
+          grep -v -i "release v.*by.*@github-actions" > filtered_notes.md || true
+          
+          echo "Filtered release notes:"
+          cat filtered_notes.md
       -
         name: Publish release
         env:
