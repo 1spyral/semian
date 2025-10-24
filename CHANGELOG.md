@@ -1,3 +1,8 @@
+# v1.0.0
+
+* Delete preview-release.yml
+* Update release workflow to use PR for review and confirm
+
 # v0.27.0
 
 * custom changes to changelog.md from luke
