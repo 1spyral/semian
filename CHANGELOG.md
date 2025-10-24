@@ -1,3 +1,11 @@
+# v0.26.9
+
+* Update Gemfile.lock
+* Update version.rb
+* Update version.rb
+* Create dsad
+* Create GitHub Action to publish new release
+
 # v026.6
 * Remove force_config_validation spammy log
 
